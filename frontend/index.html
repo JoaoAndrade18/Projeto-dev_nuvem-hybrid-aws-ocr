@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>OCR</h1>
+    <input id="f" type="file" />
+    <button onclick="send()">Enviar</button>
+    <pre id="out"></pre>
+
+    <script>
+      const API = (location.origin.includes("localhost"))
+        ? "http://localhost:8000"
+        : "/api";
+
+      async function send() {
+        const f = document.getElementById("f").files[0];
+        const fd = new FormData();
+        fd.append("file", f);
+
+        const res = await fetch(`${API}/jobs`, { method: "POST", body: fd });
+        const data = await res.json();
+
+        document.getElementById("out").textContent = JSON.stringify(data, null, 2);
+
+        // Poll simples
+        const jobId = data.job_id;
+        const timer = setInterval(async () => {
+          const r = await fetch(`${API}/jobs/${jobId}`);
+          const j = await r.json();
+          document.getElementById("out").textContent = JSON.stringify(j, null, 2);
+          if (j.status === "DONE" || j.status === "FAILED") clearInterval(timer);
+        }, 1000);
+      }
+    </script>
+  </body>
+</html>

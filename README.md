@@ -33,6 +33,12 @@ chmod +x setup_aws_profile.sh
 
 ./setup_aws_profile.sh ./aws-credentials.local ocr us-east-1 json
 
+export AWS_PROFILE=ocr
+export AWS_REGION=us-east-1
+export AWS_DEFAULT_REGION=us-east-1
+export AWS_SDK_LOAD_CONFIG=1
+export AWS_EC2_METADATA_DISABLED=true
+
 git clone <URL_DO_REPOSITORIO>
 cd PROJETO-OCR-AWS-DevNuvem
 
@@ -44,7 +50,7 @@ cd infra/terraform-dynamodb
 terraform init
 terraform apply
 
-docker compose up --build
+docker compose up --build --scale worker=3
 
 
 

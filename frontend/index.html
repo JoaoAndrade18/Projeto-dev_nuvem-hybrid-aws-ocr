@@ -1,35 +1,226 @@
 <!doctype html>
-<html>
-  <body>
-    <h1>OCR</h1>
-    <input id="f" type="file" />
-    <button onclick="send()">Enviar</button>
-    <pre id="out"></pre>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>OCR Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background:#0b1220; color:#e5e7eb; }
+    header { padding:16px; border-bottom:1px solid #1f2937; display:flex; justify-content:space-between; align-items:center;}
+    main { display:grid; grid-template-columns: 420px 1fr; gap:16px; padding:16px;}
+    .card { background:#111827; border:1px solid #1f2937; border-radius:12px; padding:16px; }
+    input, button { width:100%; padding:10px; border-radius:10px; border:1px solid #374151; background:#0b1220; color:#e5e7eb; }
+    button { cursor:pointer; background:#2563eb; border:none; margin-top:10px;}
+    button.secondary { background:#374151; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:10px; border-bottom:1px solid #1f2937; }
+    tr:hover { background:#0f172a; cursor:pointer; }
+    .badge { padding:4px 10px; border-radius:999px; border:1px solid #374151; font-size:12px; }
+    .progress { height:10px; background:#0b1220; border:1px solid #374151; border-radius:999px; overflow:hidden; }
+    .progress > div { height:10px; background:#22c55e; width:0%; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px;}
+    .img { max-width:100%; border-radius:12px; border:1px solid #1f2937; }
+    pre { white-space: pre-wrap; background:#0b1220; border:1px solid #1f2937; padding:12px; border-radius:12px; }
+    small { color:#9ca3af; }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div style="font-size:18px;font-weight:700;">OCR Dashboard</div>
+    <small>Jobs, múltiplas imagens, progresso e resultados</small>
+  </div>
+  <div><small id="apiStatus">API: …</small></div>
+</header>
 
-    <script>
-      const API = (location.origin.includes("localhost"))
-        ? "http://localhost:8000"
-        : "/api";
+<main>
+  <section class="card">
+    <h3>Criar Job</h3>
+    <label>Nome</label>
+    <input id="jobName" placeholder="Ex.: Notas fiscais - Janeiro" />
+    <label style="margin-top:10px;display:block;">Imagens (múltiplas)</label>
+    <input id="jobFiles" type="file" multiple accept="image/*"/>
+    <button onclick="createJob()">Criar e Enviar</button>
 
-      async function send() {
-        const f = document.getElementById("f").files[0];
-        const fd = new FormData();
-        fd.append("file", f);
+    <hr style="border:0;border-top:1px solid #1f2937;margin:16px 0;"/>
 
-        const res = await fetch(`${API}/jobs`, { method: "POST", body: fd });
-        const data = await res.json();
+    <h3>Jobs</h3>
+    <button class="secondary" onclick="loadJobs()">Atualizar lista</button>
+    <div style="margin-top:10px;max-height:55vh;overflow:auto;">
+      <table id="jobsTable">
+        <thead>
+          <tr><th>Nome</th><th>Status</th><th>Progresso</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
 
-        document.getElementById("out").textContent = JSON.stringify(data, null, 2);
+  <section class="card">
+    <h3>Detalhe do Job</h3>
+    <div id="jobDetail">Selecione um job na lista.</div>
+  </section>
+</main>
 
-        // Poll simples
-        const jobId = data.job_id;
-        const timer = setInterval(async () => {
-          const r = await fetch(`${API}/jobs/${jobId}`);
-          const j = await r.json();
-          document.getElementById("out").textContent = JSON.stringify(j, null, 2);
-          if (j.status === "DONE" || j.status === "FAILED") clearInterval(timer);
-        }, 1000);
+<script>
+  const API = "/api";
+
+  let currentJobId = null;
+  let pollTimer = null;
+
+  async function ping() {
+    try {
+      const r = await fetch(`${API}/health`);
+      document.getElementById("apiStatus").innerText = r.ok ? "API: OK" : "API: ERRO";
+    } catch {
+      document.getElementById("apiStatus").innerText = "API: OFF";
+    }
+  }
+
+  function pct(p, t) {
+    if (!t) return 0;
+    return Math.round((p / t) * 100);
+  }
+
+  function statusBadge(s) {
+    return `<span class="badge">${s || "?"}</span>`;
+  }
+
+  async function createJob() {
+    const name = document.getElementById("jobName").value.trim() || "Sem nome";
+    const files = document.getElementById("jobFiles").files;
+
+    if (!files || files.length === 0) {
+      alert("Selecione ao menos uma imagem.");
+      return;
+    }
+
+    // 1) cria job
+    const r1 = await fetch(`${API}/jobs`, {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({name})
+    });
+    if (!r1.ok) {
+      alert("Falha ao criar job.");
+      return;
+    }
+    const job = await r1.json();
+    currentJobId = job.job_id;
+
+    // 2) envia arquivos
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+
+    const r2 = await fetch(`${API}/jobs/${currentJobId}/files`, {method:"POST", body: fd});
+    if (!r2.ok) {
+      alert("Falha ao enviar arquivos.");
+      return;
+    }
+
+    await loadJobs();
+    await openJob(currentJobId);
+  }
+
+  async function loadJobs() {
+    const r = await fetch(`${API}/jobs`);
+    const items = await r.json();
+    const tbody = document.querySelector("#jobsTable tbody");
+    tbody.innerHTML = "";
+
+    for (const it of items) {
+      const p = it.processed_files || 0;
+      const t = it.total_files || 0;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${it.name || "Sem nome"}<br/><small>${it.job_id}</small></td>
+        <td>${statusBadge(it.status)}</td>
+        <td>${pct(p,t)}% (${p}/${t})</td>
+      `;
+      tr.onclick = () => openJob(it.job_id);
+      tbody.appendChild(tr);
+    }
+  }
+
+  async function openJob(jobId) {
+    currentJobId = jobId;
+    await renderJob(jobId);
+
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      const data = await fetch(`${API}/jobs/${currentJobId}`).then(r => r.json());
+      const st = data.job?.status;
+      await renderJob(currentJobId, data);
+      if (st === "DONE" || st === "PARTIAL" || st === "FAILED") {
+        clearInterval(pollTimer);
+        pollTimer = null;
       }
-    </script>
-  </body>
+    }, 1500);
+  }
+
+  async function renderJob(jobId, cached=null) {
+    const data = cached || await fetch(`${API}/jobs/${jobId}`).then(r => r.json());
+    const j = data.job;
+    const files = data.files || [];
+
+    const p = j.processed_files || 0;
+    const t = j.total_files || 0;
+    const percent = pct(p,t);
+
+    const htmlFiles = files.map(f => `
+      <div class="card" style="margin-top:12px;">
+        <div class="grid2">
+          <div>
+            <div><b>${f.filename}</b> ${statusBadge(f.status)}</div>
+            <small>file_id: ${f.file_id}</small><br/>
+            <small>queued: ${f.queued_at || "-"}</small><br/>
+            <small>started: ${f.started_at || "-"}</small><br/>
+            <small>finished: ${f.finished_at || "-"}</small>
+          </div>
+          <div>
+            ${f.url ? `<img class="img" src="${f.url}" />` : ""}
+          </div>
+        </div>
+        <h4>OCR</h4>
+        <pre>${(f.ocr_text || "").trim() || "(sem texto)"}</pre>
+        ${f.error_message ? `<pre>Erro: ${f.error_message}</pre>` : ""}
+      </div>
+    `).join("");
+
+    document.getElementById("jobDetail").innerHTML = `
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:16px;font-weight:700;">${j.name || "Sem nome"}</div>
+            <small>${j.job_id}</small>
+          </div>
+          <div>${statusBadge(j.status)}</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="progress"><div style="width:${percent}%"></div></div>
+          <small>Progresso: ${percent}% (${p}/${t}) | Falhas: ${j.failed_files || 0}</small>
+        </div>
+
+        <div style="margin-top:12px;">
+          <small>created: ${j.created_at || "-"}</small><br/>
+          <small>queued: ${j.queued_at || "-"}</small><br/>
+          <small>started: ${j.started_at || "-"}</small><br/>
+          <small>finished: ${j.finished_at || "-"}</small>
+        </div>
+
+        <div style="margin-top:16px;">
+          <h3>Arquivos</h3>
+          ${htmlFiles || "<small>Nenhum arquivo</small>"}
+        </div>
+      </div>
+    `;
+  }
+
+  ping();
+  loadJobs();
+  setInterval(ping, 5000);
+</script>
+</body>
 </html>

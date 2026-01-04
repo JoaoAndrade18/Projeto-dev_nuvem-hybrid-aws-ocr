@@ -39,14 +39,20 @@ services:
       until mc alias set local ${MINIO_ENDPOINT} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} >/dev/null 2>&1; do
         sleep 2;
       done;
-      echo 'MinIO pronto. Garantindo bucket...';
+      echo '[INFO] MinIO ready. creating bucket';
       mc ls local/${MINIO_BUCKET} >/dev/null 2>&1 || mc mb -p local/${MINIO_BUCKET};
-      echo 'OK: bucket garantido.';
+      echo '[INFO] created bucket';
       "
 
   api:
     build: ./backend
     env_file: .env
+    environment:
+      AWS_PROFILE: ocr
+      AWS_SDK_LOAD_CONFIG: "1"
+      AWS_EC2_METADATA_DISABLED: "true"
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
     depends_on:
       - postgres
       - redis
@@ -62,12 +68,19 @@ services:
       AWS_SDK_LOAD_CONFIG: "1"
       AWS_REGION: us-east-1
     volumes:
-      - ${HOME}/.aws:/root/.aws:ro
+      - ${HOME}/.aws:/root/.aws:ro  
+      - easyocr_models:/root/.EasyOCR
     depends_on:
       - redis
       - minio
       - postgres
-    command: ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=INFO"]
+    command: >
+      celery -A app.tasks:celery_app worker
+      -l info
+      --pool=solo
+      --concurrency=1
+      --prefetch-multiplier=1
+      -O fair
 
   frontend:
     build: ./frontend
@@ -79,3 +92,4 @@ services:
 volumes:
   pgdata:
   minio:
+  easyocr_models:

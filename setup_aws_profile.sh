@@ -49,13 +49,7 @@ aws configure set aws_session_token     "${AWS_SESSION_TOKEN}"     --profile "${
 aws configure set region                "${REGION}"                --profile "${PROFILE}"
 aws configure set output                "${OUTPUT}"                --profile "${PROFILE}"
 
-echo "Testando credenciais..."
+echo "[INFO] testing credentials for profile '${PROFILE}'..."
 aws sts get-caller-identity --profile "${PROFILE}" >/dev/null
 
-echo "OK: profile '${PROFILE}' configurado com sucesso."
-
-export AWS_PROFILE=${PROFILE}
-export AWS_SDK_LOAD_CONFIG=1
-export AWS_REGION=${REGION}
-export AWS_DEFAULT_REGION=${REGION}
-export AWS_EC2_METADATA_DISABLED=true
+echo "[INFO] profile '${PROFILE}' load is successful."

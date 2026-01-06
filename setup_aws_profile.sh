@@ -7,16 +7,16 @@ REGION="${3:-us-east-1}"
 OUTPUT="${4:-json}"
 
 if ! command -v aws >/dev/null 2>&1; then
-  echo "ERRO: aws cli não encontrado no PATH."
+  echo "[ERROR] aws cli not found."
   exit 1
 fi
 
 if [[ ! -f "$CREDS_FILE" ]]; then
-  echo "ERRO: arquivo de credenciais não existe: $CREDS_FILE"
+  echo "[ERROR] Credentials file not found: $CREDS_FILE"
   exit 1
 fi
 
-# Função awk: pega o valor após o primeiro "=" (mantém '=' finais do token)
+# Extract AWS credentials from the [default] section of the credentials file
 extract_key() {
   local key="$1"
   awk -v target="$key" '

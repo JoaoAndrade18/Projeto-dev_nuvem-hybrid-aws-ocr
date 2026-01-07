@@ -28,28 +28,28 @@
 <header>
   <div>
     <div style="font-size:18px;font-weight:700;">OCR Dashboard</div>
-    <small>Jobs, múltiplas imagens, progresso e resultados</small>
+    <small>Jobs, multiple images, progress and results</small>
   </div>
   <div><small id="apiStatus">API: …</small></div>
 </header>
 
 <main>
   <section class="card">
-    <h3>Criar Job</h3>
-    <label>Nome</label>
-    <input id="jobName" placeholder="Ex.: Notas fiscais - Janeiro" />
-    <label style="margin-top:10px;display:block;">Imagens (múltiplas)</label>
+    <h3>Create Job</h3>
+    <label>Name</label>
+    <input id="jobName" placeholder="Ex.: Base1, Teste, Prints." />
+    <label style="margin-top:10px;display:block;">Images (multiple)</label>
     <input id="jobFiles" type="file" multiple accept="image/*"/>
-    <button onclick="createJob()">Criar e Enviar</button>
+    <button onclick="createJob()">Create and Send</button>
 
     <hr style="border:0;border-top:1px solid #1f2937;margin:16px 0;"/>
 
     <h3>Jobs</h3>
-    <button class="secondary" onclick="loadJobs()">Atualizar lista</button>
+    <button class="secondary" onclick="loadJobs()">Update list</button>
     <div style="margin-top:10px;max-height:55vh;overflow:auto;">
       <table id="jobsTable">
         <thead>
-          <tr><th>Nome</th><th>Status</th><th>Progresso</th></tr>
+          <tr><th>Name</th><th>Status</th><th>Progress</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -57,8 +57,8 @@
   </section>
 
   <section class="card">
-    <h3>Detalhe do Job</h3>
-    <div id="jobDetail">Selecione um job na lista.</div>
+    <h3>Job Detail</h3>
+    <div id="jobDetail">Select a job from the list.</div>
   </section>
 </main>
 
@@ -87,34 +87,34 @@
   }
 
   async function createJob() {
-    const name = document.getElementById("jobName").value.trim() || "Sem nome";
+    const name = document.getElementById("jobName").value.trim() || "No name";
     const files = document.getElementById("jobFiles").files;
 
     if (!files || files.length === 0) {
-      alert("Selecione ao menos uma imagem.");
+      alert("[ERROR] Please select at least one image.");
       return;
     }
 
-    // 1) cria job
+    // Create job
     const r1 = await fetch(`${API}/jobs`, {
       method: "POST",
       headers: {"content-type": "application/json"},
       body: JSON.stringify({name})
     });
     if (!r1.ok) {
-      alert("Falha ao criar job.");
+      alert("[ERROR] Failed to create job.");
       return;
     }
     const job = await r1.json();
     currentJobId = job.job_id;
 
-    // 2) envia arquivos
+    // Send files
     const fd = new FormData();
     for (const f of files) fd.append("files", f);
 
     const r2 = await fetch(`${API}/jobs/${currentJobId}/files`, {method:"POST", body: fd});
     if (!r2.ok) {
-      alert("Falha ao enviar arquivos.");
+      alert("[ERROR] Failed to send files.");
       return;
     }
 
@@ -134,7 +134,7 @@
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${it.name || "Sem nome"}<br/><small>${it.job_id}</small></td>
+        <td>${it.name || "No name"}<br/><small>${it.job_id}</small></td>
         <td>${statusBadge(it.status)}</td>
         <td>${pct(p,t)}% (${p}/${t})</td>
       `;
@@ -183,8 +183,8 @@
           </div>
         </div>
         <h4>OCR</h4>
-        <pre>${(f.ocr_text || "").trim() || "(sem texto)"}</pre>
-        ${f.error_message ? `<pre>Erro: ${f.error_message}</pre>` : ""}
+        <pre>${(f.ocr_text || "").trim() || "(no text)"}</pre>
+        ${f.error_message ? `<pre>Error: ${f.error_message}</pre>` : ""}
       </div>
     `).join("");
 
@@ -192,7 +192,7 @@
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <div style="font-size:16px;font-weight:700;">${j.name || "Sem nome"}</div>
+            <div style="font-size:16px;font-weight:700;">${j.name || "No name"}</div>
             <small>${j.job_id}</small>
           </div>
           <div>${statusBadge(j.status)}</div>
@@ -200,7 +200,7 @@
 
         <div style="margin-top:12px;">
           <div class="progress"><div style="width:${percent}%"></div></div>
-          <small>Progresso: ${percent}% (${p}/${t}) | Falhas: ${j.failed_files || 0}</small>
+          <small>Progress: ${percent}% (${p}/${t}) | Failures: ${j.failed_files || 0}</small>
         </div>
 
         <div style="margin-top:12px;">
@@ -211,8 +211,8 @@
         </div>
 
         <div style="margin-top:16px;">
-          <h3>Arquivos</h3>
-          ${htmlFiles || "<small>Nenhum arquivo</small>"}
+          <h3>Files</h3>
+          ${htmlFiles || "<small>No files</small>"}
         </div>
       </div>
     `;
@@ -220,7 +220,7 @@
 
   ping();
   loadJobs();
-  setInterval(ping, 5000);
+  setInterval(ping, 10000);
 </script>
 </body>
 </html>

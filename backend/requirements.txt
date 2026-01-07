@@ -5,6 +5,7 @@ python-multipart
 SQLAlchemy
 psycopg2-binary
 celery
-redis
+amqp
+kombu
 easyocr
 Pillow

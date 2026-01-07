@@ -42,7 +42,7 @@ if [[ -z "${AWS_ACCESS_KEY_ID}" || -z "${AWS_SECRET_ACCESS_KEY}" || -z "${AWS_SE
   exit 1
 fi
 
-echo "Configurando profile '${PROFILE}'..."
+echo "Setting profile '${PROFILE}'..."
 aws configure set aws_access_key_id     "${AWS_ACCESS_KEY_ID}"     --profile "${PROFILE}"
 aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}" --profile "${PROFILE}"
 aws configure set aws_session_token     "${AWS_SESSION_TOKEN}"     --profile "${PROFILE}"
@@ -52,4 +52,12 @@ aws configure set output                "${OUTPUT}"                --profile "${
 echo "[INFO] testing credentials for profile '${PROFILE}'..."
 aws sts get-caller-identity --profile "${PROFILE}" >/dev/null
 
+export AWS_PROFILE=ocr
+export AWS_REGION=us-east-1
+export AWS_DEFAULT_REGION=us-east-1
+export AWS_SDK_LOAD_CONFIG=1
+export AWS_EC2_METADATA_DISABLED=true
+
 echo "[INFO] profile '${PROFILE}' load is successful."
+
+set +euo pipefail

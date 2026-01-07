@@ -17,12 +17,12 @@ from .settings import (
     MINIO_ACCESS_KEY,
     MINIO_SECRET_KEY,
     MINIO_BUCKET,
-    REDIS_URL,
+    RABBITMQ_URL,
 )
 from .db import SessionLocal
-from .models import Job, JobFile  # <- novos models
+from .models import Job, JobFile  
 
-celery_app = Celery("worker", broker=REDIS_URL, backend=REDIS_URL)
+celery_app = Celery("worker", broker=RABBITMQ_URL, backend="rpc://")
 
 s3 = boto3.client(
     "s3",

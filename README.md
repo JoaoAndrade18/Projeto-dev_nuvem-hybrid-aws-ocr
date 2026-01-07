@@ -3,7 +3,7 @@
 Este guia mostra como executar o projeto do zero, usando:
 - **AWS CLI** (credenciais temporárias de laboratório/AWS Academy)
 - **Terraform** (criar DynamoDB)
-- **Docker + Docker Compose** (subir API, worker, Postgres, Redis, MinIO e frontend)
+- **Docker + Docker Compose** (subir API, worker, Postgres, RabbitMQ, MinIO e frontend)
 - Copiar `.env.example` → `.env`
 
 ---
@@ -28,45 +28,31 @@ Links oficiais:
 
 ## 2. Configurações
 
-1. **Crie o arquivo de credenciais AWS local:**
+1. **Clone o repositório e acesse a pasta do projeto:**
    ```sh
-   touch aws-credentials.local
-   chmod 600 aws-credentials.local
+   git clone https://github.com/JoaoAndrade18/Projeto-dev_nuvem-hybrid-aws-ocr.git
+   cd Projeto-dev_nuvem-hybrid-aws-ocr
    ```
 
-2. **Copie as informações da CLI do laboratório aws e cole no arquivo `aws-credential.local`** 
-
-3. **Dê permissão de execução ao script de setup:**
+2. **Crie o arquivo de credenciais AWS local e dê permissão de execução:**
    ```sh
+   touch aws-credentials.local
    chmod +x setup_aws_profile.sh
    ```
 
+3. **Copie as informações da CLI do laboratório aws e cole no arquivo `aws-credential.local`** 
+
 4. **Configure o perfil AWS usando o script:**
    ```sh
-   ./setup_aws_profile.sh ./aws-credentials.local ocr us-east-1 json
+   source ./setup_aws_profile.sh ./aws-credentials.local ocr us-east-1 json
    ```
 
-5. **Exporte as variáveis de ambiente AWS:**
-   ```sh
-   export AWS_PROFILE=ocr
-   export AWS_REGION=us-east-1
-   export AWS_DEFAULT_REGION=us-east-1
-   export AWS_SDK_LOAD_CONFIG=1
-   export AWS_EC2_METADATA_DISABLED=true
-   ```
-
-6. **Clone o repositório e acesse a pasta do projeto:**
-   ```sh
-   git clone <URL_DO_REPOSITORIO>
-   cd PROJETO-OCR-AWS-DevNuvem
-   ```
-
-7. **Copie o arquivo de variáveis de ambiente:**
+5. **Copie o arquivo de variáveis de ambiente:**
    ```sh
    cp .env.example .env
    ```
 
-8. **Suba a infraestrutura do DynamoDB com Terraform:**
+6. **Suba a infraestrutura do DynamoDB com Terraform:**
    ```sh
    cd infra/terraform-dynamodb
    terraform init
@@ -74,7 +60,7 @@ Links oficiais:
    cd ../..
    ```
 
-9. **Suba os containers com Docker Compose (incluindo 3 workers):**
+7. **Suba os containeres com Docker Compose (incluindo 3 workers):**
    ```sh
    docker compose up --build --scale worker=3
    ```

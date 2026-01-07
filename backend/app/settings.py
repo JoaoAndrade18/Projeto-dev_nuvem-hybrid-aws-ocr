@@ -10,4 +10,4 @@ MINIO_BUCKET = os.getenv("MINIO_BUCKET", "images")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://ocr:ocr@postgres:5432/ocr")
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672//")

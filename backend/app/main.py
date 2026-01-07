@@ -68,7 +68,7 @@ def _to_plain(v: Any) -> Any:
 def _normalize_job_item(item: Dict[str, Any]) -> Dict[str, Any]:
     out = {k: _to_plain(v) for k, v in (item or {}).items()}
     out.setdefault("job_id", "")
-    out.setdefault("name", "Sem nome")
+    out.setdefault("name", "No name")
     out.setdefault("status", "UNKNOWN")
     out.setdefault("created_at", None)
     out.setdefault("queued_at", None)
@@ -84,7 +84,7 @@ def _startup():
     ensure_minio_bucket()
 
 class CreateJobReq(BaseModel):
-    name: str = "Sem nome"
+    name: str = "No name"
 
 class CreateJobResp(BaseModel):
     job_id: str
@@ -167,16 +167,16 @@ def create_job(payload: CreateJobReq):
 @app.post("/jobs/{job_id}/files")
 async def add_files(job_id: str, files: List[UploadFile] = File(...)):
     if not files:
-        raise HTTPException(400, "Nenhum arquivo enviado.")
+        raise HTTPException(400, "No files uploaded.")
 
     job_item = jobs_table.get_item(Key={"job_id": job_id}).get("Item")
     if not job_item:
-        raise HTTPException(404, "Job não encontrado.")
+        raise HTTPException(404, "Job not found.")
 
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
-        raise HTTPException(400, "job_id inválido.")
+        raise HTTPException(400, "Invalid job_id.")
 
     now_iso = utc_now().isoformat()
     jobs_table.update_item(
@@ -198,7 +198,7 @@ async def add_files(job_id: str, files: List[UploadFile] = File(...)):
             continue
 
         file_uuid = uuid.uuid4()
-        object_key = f"{job_id}/{file_uuid}/{f.filename}"
+        object_key = f"{job_id}/{file_uuid}_{f.filename}"
         s3.put_object(Bucket=MINIO_BUCKET, Key=object_key, Body=content)
         queued_at = utc_now()
         db = db_session()
@@ -229,7 +229,7 @@ async def add_files(job_id: str, files: List[UploadFile] = File(...)):
         created.append({"file_id": str(file_uuid), "filename": f.filename, "object_key": object_key})
 
     if not created:
-        raise HTTPException(400, "Todos os arquivos estavam vazios.")
+        raise HTTPException(400, "No files uploaded.")
 
     return {"job_id": job_id, "files_created": created, "count": len(created)}
 
@@ -245,14 +245,14 @@ def list_jobs():
 def get_job(job_id: str):
     job_item = jobs_table.get_item(Key={"job_id": job_id}).get("Item")
     if not job_item:
-        raise HTTPException(404, "Job não encontrado.")
+        raise HTTPException(404, "Job not found.")
 
     job_item_norm = _normalize_job_item(job_item)
 
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
-        raise HTTPException(400, "job_id inválido.")
+        raise HTTPException(400, "Invalid job_id.")
 
     db = db_session()
     try:

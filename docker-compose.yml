@@ -10,10 +10,16 @@ services:
     ports:
       - "5432:5432"
 
-  redis:
-    image: redis:7
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "6379:6379"
+      - "5672:5672"   # Broker port
+      - "15672:15672" # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   minio:
     image: minio/minio:latest
@@ -35,7 +41,7 @@ services:
     restart: "no"
     entrypoint: >
       /bin/sh -c "
-      echo 'Aguardando MinIO...';
+      echo '[INFO] Loading MinIO';
       until mc alias set local ${MINIO_ENDPOINT} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} >/dev/null 2>&1; do
         sleep 2;
       done;
@@ -55,7 +61,7 @@ services:
       - ${HOME}/.aws:/root/.aws:ro
     depends_on:
       - postgres
-      - redis
+      - rabbitmq
       - minio
     ports:
       - "8000:8000"
@@ -71,7 +77,7 @@ services:
       - ${HOME}/.aws:/root/.aws:ro  
       - easyocr_models:/root/.EasyOCR
     depends_on:
-      - redis
+      - rabbitmq
       - minio
       - postgres
     command: >
@@ -93,3 +99,4 @@ volumes:
   pgdata:
   minio:
   easyocr_models:
+  rabbitmq_data:
